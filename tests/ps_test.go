@@ -3,25 +3,44 @@
 package tests
 
 import (
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/deis/deis/tests/utils"
 )
 
 var (
-	psListCmd  = "ps:list --app={{.AppName}}"
-	psScaleCmd = "ps:scale web={{.ProcessNum}} --app={{.AppName}}"
+	psListCmd      = "ps:list --app={{.AppName}}"
+	psScaleCmd     = "ps:scale web={{.ProcessNum}} --app={{.AppName}}"
+	psDownScaleCmd = "ps:scale web=0 --app={{.AppName}}"
 )
 
 func TestPs(t *testing.T) {
 	params := psSetup(t)
-	psScaleTest(t, params)
+	psScaleTest(t, params, psScaleCmd)
 	appsOpenTest(t, params)
 	psListTest(t, params, false)
+	psScaleTest(t, params, psDownScaleCmd)
+
+	// FIXME if we don't wait here, some of the routers may give us a 502 before
+	// the app is removed from the config.
+	// we wait 7 seconds since confd reloads every 5 seconds
+	time.Sleep(time.Millisecond * 7000)
+
+	// test for a 503 response
+	utils.CurlWithFail(t, params, true, "503")
+
 	utils.AppsDestroyTest(t, params)
 	utils.Execute(t, psScaleCmd, params, true, "404 NOT FOUND")
+	// ensure we can choose our preferred beverage
+	utils.Execute(t, psScaleCmd, params, true, "but first, coffee!")
+	if err := os.Setenv("DEIS_DRINK_OF_CHOICE", "tea"); err != nil {
+		t.Fatal(err)
+	}
+	utils.Execute(t, psScaleCmd, params, true, "but first, tea!")
 }
 
 func psSetup(t *testing.T) *utils.DeisTestConfig {
@@ -48,8 +67,7 @@ func psListTest(t *testing.T, params *utils.DeisTestConfig, notflag bool) {
 	utils.CheckList(t, psListCmd, params, output, notflag)
 }
 
-func psScaleTest(t *testing.T, params *utils.DeisTestConfig) {
-	cmd := psScaleCmd
+func psScaleTest(t *testing.T, params *utils.DeisTestConfig, cmd string) {
 	if strings.Contains(params.ExampleApp, "dockerfile") {
 		cmd = strings.Replace(cmd, "web", "cmd", 1)
 	}

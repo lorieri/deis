@@ -6,29 +6,11 @@ import (
 	"io/ioutil"
 	"strings"
 
-	docopt "github.com/docopt/docopt-go"
+	"github.com/deis/deis/deisctl/utils"
 )
 
 // Config runs the config subcommand
-func Config() error {
-	usage := `Deis Cluster Configuration
-
-    Usage:
-    deisctl config <target> get [<key>...] [options]
-    deisctl config <target> set <key=val>... [options]
-
-    Options:
-    --verbose                   print out the request bodies [default: false]
-    `
-	// parse command-line arguments
-	args, err := docopt.Parse(usage, nil, true, "", true)
-	if err != nil {
-		return err
-	}
-	err = setConfigFlags(args)
-	if err != nil {
-		return err
-	}
+func Config(args map[string]interface{}) error {
 	return doConfig(args)
 }
 
@@ -46,14 +28,6 @@ func CheckConfig(root string, k string) error {
 		return err
 	}
 
-	return nil
-}
-
-// Flags for config package
-var Flags struct {
-}
-
-func setConfigFlags(args map[string]interface{}) error {
 	return nil
 }
 
@@ -100,7 +74,7 @@ func doConfigSet(client *etcdClient, root string, kvs []string) ([]string, error
 
 		// special handling for sshKey
 		if path == "/deis/platform/sshPrivateKey" {
-			b64, err := readSSHPrivateKey(v)
+			b64, err := readSSHPrivateKey(utils.ResolvePath(v))
 			if err != nil {
 				return result, err
 			}

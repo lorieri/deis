@@ -6,30 +6,36 @@ DEV_IMAGE = $(DEV_REGISTRY)/$(IMAGE)
 BUILD_IMAGE = $(COMPONENT)-build
 
 build: check-docker
-	docker build -t $(BUILD_IMAGE) parent
-	docker cp `docker run -d $(BUILD_IMAGE)`:/nginx.tgz .
-	docker cp `docker run -d $(BUILD_IMAGE)`:/go/bin/boot bin/
-	docker build -t $(IMAGE) .
-	rm nginx.tgz
-	rm bin/boot
+	cp -pR ../Godeps .
+	docker build -t $(BUILD_IMAGE) .
+	docker cp `docker run -d $(BUILD_IMAGE)`:/nginx.tgz image/
+	docker cp `docker run -d $(BUILD_IMAGE)`:/go/bin/boot image/bin/
+	docker build -t $(IMAGE) image
+	rm image/nginx.tgz
+	rm image/bin/boot
 
 clean: check-docker check-registry
+	rm -rf Godeps
 	docker rmi $(IMAGE)
 
 full-clean: check-docker check-registry
 	docker images -q $(IMAGE_PREFIX)$(COMPONENT) | xargs docker rmi -f
 
 install: check-deisctl
-	deisctl scale $(COMPONENT)=1
+	deisctl scale $(COMPONENT)=3
 
 uninstall: check-deisctl
 	deisctl scale $(COMPONENT)=0
 
 start: check-deisctl
-	deisctl start $(COMPONENT)
+	deisctl start $(COMPONENT)@1
+	deisctl start $(COMPONENT)@2
+	deisctl start $(COMPONENT)@3
 
 stop: check-deisctl
-	deisctl stop $(COMPONENT)
+	deisctl stop $(COMPONENT)@1
+	deisctl stop $(COMPONENT)@2
+	deisctl stop $(COMPONENT)@3
 
 restart: stop start
 
@@ -56,4 +62,4 @@ test-unit:
 
 test-functional:
 	@docker history deis/test-etcd >/dev/null 2>&1 || docker pull deis/test-etcd:latest
-	GOPATH=$(CURDIR)/../tests/_vendor:$(GOPATH) go test -v ./tests/...
+	GOPATH=`cd ../tests/ && godep path`:$(GOPATH) go test -v ./tests/...

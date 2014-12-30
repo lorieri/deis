@@ -8,25 +8,28 @@ import (
 	"github.com/deis/deis/deisctl/cmd"
 )
 
+// DeisCtlClient manages Deis components, configuration, and related tasks.
 type DeisCtlClient interface {
-	Config() error
-	Install(targets []string) error
-	Journal(targets []string) error
-	List() error
-	RefreshUnits() error
-	Restart(targets []string) error
-	Scale(targets []string) error
-	Start(targets []string) error
-	Status(targets []string) error
-	Stop(targets []string) error
-	Uninstall(targets []string) error
-	Update() error
+	Config(argv []string) error
+	Install(argv []string) error
+	Journal(argv []string) error
+	List(argv []string) error
+	RefreshUnits(argv []string) error
+	Restart(argv []string) error
+	Scale(argv []string) error
+	Start(argv []string) error
+	Status(argv []string) error
+	Stop(argv []string) error
+	Uninstall(argv []string) error
 }
 
+// Client uses a backend to implement the DeisCtlClient interface.
 type Client struct {
 	Backend backend.Backend
 }
 
+// NewClient returns a Client using the requested backend.
+// The only backend currently supported is "fleet".
 func NewClient(requestedBackend string) (*Client, error) {
 	var backend backend.Backend
 
@@ -47,50 +50,63 @@ func NewClient(requestedBackend string) (*Client, error) {
 	return &Client{Backend: backend}, nil
 }
 
-func (c *Client) Config() error {
-	return cmd.Config()
+// Config gets or sets a configuration value from the cluster.
+//
+// A configuration value is stored and retrieved from a key/value store (in this case, etcd)
+// at /deis/<component>/<config>. Configuration values are typically used for component-level
+// configuration, such as enabling TLS for the routers.
+func (c *Client) Config(argv []string) error {
+	return cmd.Config(argv)
 }
 
-func (c *Client) Install(targets []string) error {
-	return cmd.Install(c.Backend, targets)
+// Install loads the definitions of components from local unit files.
+// After Install, the components will be available to Start.
+func (c *Client) Install(argv []string) error {
+	return cmd.Install(argv, c.Backend)
 }
 
-func (c *Client) Journal(targets []string) error {
-	return cmd.Journal(c.Backend, targets)
+// Journal prints log output for the specified components.
+func (c *Client) Journal(argv []string) error {
+	return cmd.Journal(argv, c.Backend)
 }
 
-func (c *Client) List() error {
-	return cmd.ListUnits(c.Backend)
+// List prints a summary of installed components.
+func (c *Client) List(argv []string) error {
+	return cmd.ListUnits(argv, c.Backend)
 }
 
-func (c *Client) RefreshUnits() error {
-	return cmd.RefreshUnits()
+// RefreshUnits overwrites local unit files with those requested.
+func (c *Client) RefreshUnits(argv []string) error {
+	return cmd.RefreshUnits(argv)
 }
 
-func (c *Client) Restart(targets []string) error {
-	return cmd.Restart(c.Backend, targets)
+// Restart stops and then starts components.
+func (c *Client) Restart(argv []string) error {
+	return cmd.Restart(argv, c.Backend)
 }
 
-func (c *Client) Scale(targets []string) error {
-	return cmd.Scale(c.Backend, targets)
+// Scale grows or shrinks the number of running components.
+func (c *Client) Scale(argv []string) error {
+	return cmd.Scale(argv, c.Backend)
 }
 
-func (c *Client) Start(targets []string) error {
-	return cmd.Start(c.Backend, targets)
+// Start activates the specified components.
+func (c *Client) Start(argv []string) error {
+	return cmd.Start(argv, c.Backend)
 }
 
-func (c *Client) Status(targets []string) error {
-	return cmd.Status(c.Backend, targets)
+// Status prints the current status of components.
+func (c *Client) Status(argv []string) error {
+	return cmd.Status(argv, c.Backend)
 }
 
-func (c *Client) Stop(targets []string) error {
-	return cmd.Stop(c.Backend, targets)
+// Stop deactivates the specified components.
+func (c *Client) Stop(argv []string) error {
+	return cmd.Stop(argv, c.Backend)
 }
 
-func (c *Client) Uninstall(targets []string) error {
-	return cmd.Uninstall(c.Backend, targets)
-}
-
-func (c *Client) Update() error {
-	return cmd.Update()
+// Uninstall unloads the definitions of the specified components.
+// After Uninstall, the components will be unavailable until Install is called.
+func (c *Client) Uninstall(argv []string) error {
+	return cmd.Uninstall(argv, c.Backend)
 }

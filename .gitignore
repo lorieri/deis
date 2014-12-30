@@ -1,8 +1,5 @@
 *.py[cod]
 
-# C extensions
-*.so
-
 # Packages
 *.egg
 *.egg-info
@@ -17,36 +14,23 @@ develop-eggs
 lib
 lib64
 
-# Installer logs
-pip-log.txt
-
-# Unit test / coverage reports
-.coverage
-.tox
-nosetests.xml
-logger/coverage.out
-tests/example-*
-
-# Translations
-*.mo
-
-# Mr Developer
-.mr.developer.cfg
-.project
-.pydevproject
-
-# Sublime Text droppings
-*.sublime-project
-*.sublime-workspace
-
 # Deis' config file
 controller/deis/local_settings.py
 controller/.secret_key
 
-# deis application logs
+# application logs
 logs/
 
-# local binaries and installers
+# local binaries, installers, and artifacts
+builder/Godeps/
+builder/image/bin/extract-domain
+builder/image/bin/extract-types
+builder/image/bin/extract-version
+builder/image/bin/generate-buildhook
+builder/image/bin/get-app-config
+builder/image/bin/get-app-values
+builder/image/bin/publish-release-controller
+builder/image/bin/yaml2json-procfile
 client/dist/
 client/makeself/
 contrib/bumpver/bumpver
@@ -57,21 +41,24 @@ deisctl/makeself/
 docs/_build/
 docs/docs.zip
 logspout/build/
+logspout/image/logspout
+logspout/Godeps/
+publisher/Godeps/
+router/Godeps/
 
-# ctags index
-tags
-
-# Misc.
-Berksfile.lock
-.DS_Store
+# coverage reports
+.coverage
+coverage.out
 htmlcov/
-.ruby-version
-venv/
-.vagrant
-Vagrantfile.local
-*.swp
-.bundle
+
+# integration test droppings
+tests/example-*
+
+# extra .py droppings from building docs
 /__init__.py
+
+# python virtual environments for testing
+venv
 
 # Local user-data generated from user-data.example
 contrib/coreos/user-data
@@ -84,3 +71,7 @@ contrib/ec2/cloudformation.json
 
 # GCE generated user-data
 contrib/gce/gce-user-data
+
+# vagrant local config and droppings
+/config.rb
+.vagrant

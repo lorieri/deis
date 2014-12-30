@@ -24,7 +24,7 @@ Subcommands, use ``deis help [subcommand]`` to learn more::
   keys          manage ssh keys used for `git push` deployments
   perms         manage permissions for applications
 
-Developer shortcut commands::
+Shortcut commands, use ``deis shortcuts`` to see all::
 
   create        create a new application
   scale         scale processes by type (web=2, worker=1)
@@ -33,6 +33,7 @@ Developer shortcut commands::
   logs          view aggregated log info for the app
   run           run a command in an ephemeral app container
   destroy       destroy an application
+  pull          imports an image and deploys as a new release
 
 Use ``git push deis master`` to deploy to an application.
 
@@ -58,6 +59,7 @@ import sys
 import time
 import urlparse
 import webbrowser
+import yaml
 
 from dateutil import parser
 from dateutil import relativedelta
@@ -67,7 +69,10 @@ from docopt import DocoptExit
 import requests
 from termcolor import colored
 
-__version__ = '0.15.0+git'
+__version__ = '1.2.0-dev'
+
+# what version of the API is this client compatible with?
+__api_version__ = '1.1'
 
 
 locale.setlocale(locale.LC_ALL, '')
@@ -94,9 +99,9 @@ class Session(requests.Session):
     def app(self):
         """Retrieve the application's name."""
         try:
-            return self._get_name_from_git_remote(self.git_root())
+            return self._get_name_from_git_remote(self.git_root()).lower()
         except EnvironmentError:
-            return os.path.basename(os.getcwd())
+            return os.path.basename(os.getcwd()).lower()
 
     def is_git_app(self):
         """Determines if this app is a git repository. This is important in special cases
@@ -201,8 +206,13 @@ class Settings(dict):
         Serialize and save settings to the filesystem
         """
         data = json.dumps(dict(self))
-        with open(self._path, 'w') as f:
-            f.write(data)
+        try:
+            with open(self._path, 'w') as f:
+                f.write(data)
+        except IOError:
+            logging.getLogger(__name__).error("Could not write to settings file at \
+'~/.deis/client.json' Do you have the right file permissions?")
+            sys.exit(1)
         return data
 
 
@@ -386,10 +396,18 @@ class DeisClient(object):
         url = urlparse.urljoin(controller, path, **kwargs)
         headers = {
             'content-type': 'application/json',
-            'X-Deis-Version': __version__.rsplit('.', 1)[0],
+            'X-Deis-Version': __api_version__.rsplit('.', 1)[0],
             'Authorization': 'token {}'.format(token)
         }
         response = func(url, data=body, headers=headers)
+        # check for version mismatch
+        server_api_version = response.headers.get('X_DEIS_API_VERSION')
+        if server_api_version is not None and server_api_version != __api_version__:
+            self._logger.warning("""
+ !    WARNING: Client and server API versions do not match. Please consider upgrading.
+ !    Client version: {}
+ !    Server version: {}
+""".format(__api_version__, server_api_version))
         return response
 
     def apps(self, args):
@@ -426,6 +444,9 @@ class DeisClient(object):
         Options:
           --no-remote
             do not create a `deis` git remote.
+
+          -b --buildpack BUILDPACK
+            a buildpack url to use for this app
         """
         body = {}
         app_name = None
@@ -446,30 +467,35 @@ class DeisClient(object):
         finally:
             progress.cancel()
             progress.join()
-        if response.status_code == requests.codes.created:
-            data = response.json()
-            app_id = data['id']
-            self._logger.info("done, created {}".format(app_id))
-            # set a git remote if necessary
-            try:
-                self._session.git_root()
-            except EnvironmentError:
-                return
-            hostname = urlparse.urlparse(self._settings['controller']).netloc.split(':')[0]
-            git_remote = "ssh://git@{hostname}:2222/{app_id}.git".format(**locals())
-            if args.get('--no-remote'):
-                self._logger.info('remote available at {}'.format(git_remote))
-            else:
-                try:
-                    subprocess.check_call(
-                        ['git', 'remote', 'add', '-f', 'deis', git_remote],
-                        stdout=subprocess.PIPE)
-                    self._logger.info('Git remote deis added')
-                except subprocess.CalledProcessError:
-                    self._logger.error('Could not create Deis remote')
-                    sys.exit(1)
-        else:
+        if response.status_code != requests.codes.created:
             raise ResponseError(response)
+
+        data = response.json()
+        app_id = data['id']
+        self._logger.info("done, created {}".format(app_id))
+
+        buildpack = args.get('--buildpack')
+        if buildpack:
+            self._config_set(app_id, {'BUILDPACK_URL': buildpack})
+
+        # set a git remote if necessary
+        try:
+            self._session.git_root()
+        except EnvironmentError:
+            return
+        hostname = urlparse.urlparse(self._settings['controller']).netloc.split(':')[0]
+        git_remote = "ssh://git@{hostname}:2222/{app_id}.git".format(**locals())
+        if args.get('--no-remote'):
+            self._logger.info('remote available at {}'.format(git_remote))
+        else:
+            try:
+                subprocess.check_call(
+                    ['git', 'remote', 'add', '-f', 'deis', git_remote],
+                    stdout=subprocess.PIPE)
+                self._logger.info('Git remote deis added')
+            except subprocess.CalledProcessError:
+                self._logger.error('Could not create Deis remote')
+                sys.exit(1)
 
     def apps_destroy(self, args):
         """
@@ -486,8 +512,10 @@ class DeisClient(object):
             name for the application.
         """
         app = args.get('--app')
+        delete_remote = False
         if not app:
             app = self._session.app
+            delete_remote = True
         confirm = args.get('--confirm')
         if confirm == app:
             pass
@@ -514,8 +542,9 @@ class DeisClient(object):
                                     requests.codes.not_found):
             self._logger.info('done in {}s'.format(int(time.time() - before)))
             try:
-                # If the requested app is a heroku app, delete the git remote
-                if self._session.is_git_app():
+                # If the requested app is a heroku app and the app
+                # was inferred from session, delete the git remote
+                if self._session.is_git_app() and delete_remote:
                     subprocess.check_call(
                         ['git', 'remote', 'rm', 'deis'],
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -605,19 +634,22 @@ class DeisClient(object):
             # strip the last newline character
             for line in response.json().split('\n')[:-1]:
                 # get the tag from the log
-                log_tag = line.split(': ')[0].split(' ')[1]
-                # colorize the log based on the tag
-                color = sum([ord(ch) for ch in log_tag]) % 6
-                def f(x):
-                    return {
-                        0: 'green',
-                        1: 'cyan',
-                        2: 'red',
-                        3: 'yellow',
-                        4: 'blue',
-                        5: 'magenta',
-                    }.get(x, 'magenta')
-                self._logger.info(colored(line, f(color)))
+                try:
+                    log_tag = line.split(': ')[0].split(' ')[1]
+                    # colorize the log based on the tag
+                    color = sum([ord(ch) for ch in log_tag]) % 6
+                    def f(x):
+                        return {
+                            0: 'green',
+                            1: 'cyan',
+                            2: 'red',
+                            3: 'yellow',
+                            4: 'blue',
+                            5: 'magenta',
+                        }.get(x, 'magenta')
+                    self._logger.info(colored(line, f(color)))
+                except IndexError:
+                    self._logger.info(line)
         else:
             raise ResponseError(response)
 
@@ -648,7 +680,7 @@ class DeisClient(object):
                                   json.dumps(body))
         if response.status_code == requests.codes.ok:
             rc, output = json.loads(response.content)
-            sys.stdout.write(output)
+            sys.stdout.write(encode(output))
             sys.stdout.flush()
             sys.exit(rc)
         else:
@@ -858,7 +890,8 @@ class DeisClient(object):
     def builds_create(self, args):
         """
         Creates a new build of an application. Imports an <image> and deploys it to Deis
-        as a new release.
+        as a new release. If a Procfile is present in the current directory, it will be used
+        as the default process types for this application.
 
         Usage: deis builds:create <image> [options]
 
@@ -870,11 +903,28 @@ class DeisClient(object):
         Options:
           -a --app=<app>
             The uniquely identifiable name for the application.
+          -p --procfile=<procfile>
+            A YAML string used to supply a Procfile to the application.
         """
         app = args.get('--app')
         if not app:
             app = self._session.app
         body = {'image': args['<image>']}
+        procfile = args.get('--procfile')
+        if procfile:
+            try:
+                body['procfile'] = yaml.load(procfile)
+            except yaml.YAMLError:
+                self._logger.error('could not parse --procfile')
+                sys.exit(1)
+        else:
+            # read in Procfile for default process types
+            if os.path.exists('Procfile'):
+                try:
+                    body['procfile'] = yaml.load(open('Procfile'))
+                except yaml.YAMLError:
+                    self._logger.error('could not parse Procfile')
+                    sys.exit(1)
         sys.stdout.write('Creating build... ')
         sys.stdout.flush()
         try:
@@ -989,7 +1039,14 @@ class DeisClient(object):
         app = args.get('--app')
         if not app:
             app = self._session.app
-        body = {'values': json.dumps(dictify(args['<var>=<value>']))}
+        values = dictify(args['<var>=<value>'])
+        self._config_set(app, values)
+
+    def _config_set(self, app, values):
+        """
+        Internal logic to set environment variables for an application.
+        """
+        body = {'values': json.dumps(values)}
         sys.stdout.write('Creating config... ')
         sys.stdout.flush()
         try:
@@ -1440,7 +1497,9 @@ class DeisClient(object):
         for type_num in args.get('<type>=<num>'):
             typ, count = type_num.split('=')
             body.update({typ: int(count)})
-        sys.stdout.write('Scaling processes... but first, coffee!\n')
+        scaling_cmd = 'Scaling processes... but first, {}!\n'.format(
+            os.environ.get('DEIS_DRINK_OF_CHOICE', 'coffee'))
+        sys.stdout.write(scaling_cmd)
         sys.stdout.flush()
         try:
             progress = TextProgress()
@@ -1988,11 +2047,13 @@ def parse_args(cmd):
 
 def _dispatch_cmd(method, args):
     logger = logging.getLogger(__name__)
+    if args.get('--app'):
+        args['--app'] = args['--app'].lower()
     try:
         method(args)
     except requests.exceptions.ConnectionError as err:
-        logger.error("Couldn't connect to the Deis Controller. Make sure that the Controller URI is \
-correct and the server is running.")
+        logger.error("Couldn't connect to the Deis Controller:\n{}\nMake sure that the Controller URI is \
+correct and the server is running.".format(err))
         sys.exit(1)
     except EnvironmentError as err:
         logger.error(err.args[0])

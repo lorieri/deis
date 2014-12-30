@@ -22,16 +22,6 @@ coreos:
     command: start
   - name: fleet.service
     command: start
-  - name: fleet.socket
-    command: start
-    content: |
-      [Socket]
-      # Talk to the API over a Unix domain socket (default)
-      ListenStream=/var/run/fleet.sock
-      Service=fleet.service
-
-      [Install]
-      WantedBy=sockets.target
   - name: stop-update-engine.service
     command: start
     content: |
@@ -50,11 +40,36 @@ coreos:
 
       [Service]
       Type=oneshot
-      ExecStart=/usr/bin/sh -c 'curl -sSL --retry 5 --retry-delay 2 http://deis.io/deisctl/install.sh | sh -s 0.15.0'
+      ExecStart=/usr/bin/sh -c 'curl -sSL --retry 5 --retry-delay 2 http://deis.io/deisctl/install.sh | sh -s 1.1.1'
+  - name: ntpdate.service
+    command: start
+  - name: timedate-ntp-synchronization.service
+    command: start
+    content: |
+      [Unit]
+      Description=Synchronize system clock
+      After=ntpdate.service
+
+      [Service]
+      ExecStart=/usr/bin/timedatectl set-timezone UTC
+      ExecStart=/usr/bin/timedatectl set-ntp true
+      ExecStart=/sbin/hwclock --systohc --utc
+      RemainAfterExit=yes
+      Type=oneshot
+  - name: debug-etcd.service
+    command: enable
+    content: |
+      [Unit]
+      Description=etcd debugging service
+
+      [Service]
+      ExecStartPre=/usr/bin/curl -sSL -o /opt/bin/jq http://stedolan.github.io/jq/download/linux64/jq
+      ExecStartPre=/usr/bin/chmod +x /opt/bin/jq
+      ExecStart=/usr/bin/bash -c "while true; do curl -sL http://127.0.0.1:4001/v2/stats/leader | /opt/bin/jq . ; sleep 1 ; done"
 write_files:
   - path: /etc/deis-release
     content: |
-      DEIS_RELEASE=v0.15.0
+      DEIS_RELEASE=v1.1.1
   - path: /etc/motd
     content: " \e[31m* *    \e[34m*   \e[32m*****    \e[39mddddd   eeeeeee iiiiiii   ssss\n\e[31m*   *  \e[34m* *  \e[32m*   *     \e[39md   d   e    e    i     s    s\n \e[31m* *  \e[34m***** \e[32m*****     \e[39md    d  e         i    s\n\e[32m*****  \e[31m* *    \e[34m*       \e[39md     d e         i     s\n\e[32m*   * \e[31m*   *  \e[34m* *      \e[39md     d eee       i      sss\n\e[32m*****  \e[31m* *  \e[34m*****     \e[39md     d e         i         s\n  \e[34m*   \e[32m*****  \e[31m* *      \e[39md    d  e         i          s\n \e[34m* *  \e[32m*   * \e[31m*   *     \e[39md   d   e    e    i    s    s\n\e[34m***** \e[32m*****  \e[31m* *     \e[39mddddd   eeeeeee iiiiiii  ssss\n\n\e[39mWelcome to Deis\t\t\tPowered by Core\e[38;5;45mO\e[38;5;206mS\e[39m\n"
   - path: /etc/profile.d/nse-function.sh
@@ -63,6 +78,10 @@ write_files:
       function nse() {
         docker exec -it $1 bash
       }
+  - path: /etc/systemd/system/docker.service.d/50-insecure-registry.conf
+    content: |
+        [Service]
+        Environment="DOCKER_OPTS=--insecure-registry 10.0.0.0/8 --insecure-registry 172.16.0.0/12 --insecure-registry 192.168.0.0/16"
   - path: /run/deis/bin/get_image
     permissions: '0755'
     content: |
@@ -108,3 +127,9 @@ write_files:
       deisctl list
       etcdctl ls --recursive /deis
       printf "\n"
+  - path: /home/core/.toolboxrc
+    owner: core
+    content: |
+      TOOLBOX_DOCKER_IMAGE=ubuntu-debootstrap
+      TOOLBOX_DOCKER_TAG=14.04
+      TOOLBOX_USER=root

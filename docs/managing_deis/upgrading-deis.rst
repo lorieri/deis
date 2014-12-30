@@ -12,6 +12,8 @@ There are currently two strategies for upgrading a Deis cluster:
 * In-place Upgrade (recommended)
 * Migration Upgrade
 
+Before attempting an upgrade, it is strongly recommended to :ref:`backup your data <backing_up_data>`.
+
 In-place Upgrade
 ----------------
 
@@ -20,22 +22,44 @@ leaving your applications and platform data intact.  This is the easiest and lea
 The general approach is to use ``deisctl`` to uninstall all platform components, update the platform version
 and then reinstall platform components.
 
-.. note::
+.. important::
 
-    In-place upgrades are supported starting from Deis version 0.14.0
-
-.. note::
-
-    Occasionally, when upgrading Deis, we have seen deisctl stuck in a restart loop on ``deis-store`` components.
-    The workaround for this is to restart the store-daemons with ``deisctl restart store-daemon``. If run while
-    the original ``deisctl start platform`` command is still running, it should resume almost immediately.
+    Always use a version of ``deisctl`` that matches the Deis release.
+    Verify this with ``deisctl --version``.
 
 Use the following steps to perform an in-place upgrade of your Deis cluster.
 
+First, use the current ``deisctl`` to stop and uninstall the Deis platform.
+
 .. code-block:: console
 
+    $ deisctl --version  # should match the installed platform
+    1.0.2
     $ deisctl stop platform && deisctl uninstall platform
-    $ deisctl config platform set version=v0.15.0
+
+There are important security fixes since Deis 1.0.2 that require upgrading
+to CoreOS 494.1.0 or later, and configuring Docker to access deis-registry. See
+:ref:`upgrading-coreos` first, then open a shell to each node:
+
+.. code-block:: console
+
+    $ ssh deis-1.example.com  # repeat these steps for each node
+    $ sudo -i
+    $ mkdir -p /etc/systemd/system/docker.service.d
+    $ cat <<EOF > /etc/systemd/system/docker.service.d/50-insecure-registry.conf
+    [Service]
+    Environment="DOCKER_OPTS=--insecure-registry 10.0.0.0/8 --insecure-registry 172.16.0.0/12 --insecure-registry 192.168.0.0/16"
+    EOF
+    $ reboot  # one node at a time, to avoid etcd failures
+
+Finally, update ``deisctl`` to the new version and reinstall:
+
+.. code-block:: console
+
+    $ curl -sSL http://deis.io/deisctl/install.sh | sh -s 1.1.1
+    $ deisctl --version  # should match the desired platform
+    1.1.1
+    $ deisctl config platform set version=v1.1.1
     $ deisctl install platform
     $ deisctl start platform
 
@@ -147,3 +171,58 @@ new cluster, you would create a DNS record that looks like the following:
 Retire the old cluster
 ^^^^^^^^^^^^^^^^^^^^^^
 Once all applications have been validated, the old cluster can be retired.
+
+
+.. _upgrading-coreos:
+
+Upgrading CoreOS
+----------------
+
+By default, Deis disables CoreOS automatic updates. This is partially because of problems we've seen
+with etcd/fleet version incompatibilities as hosts in the cluster are upgraded one-by-one.
+Additionally, because Deis customizes the CoreOS cloud-config file, upgrading the CoreOS host to
+a new version without accounting for changes in the cloud-config file could cause Deis to stop
+functioning properly.
+
+.. important::
+
+  Enabling updates for CoreOS will result in the machine upgrading to the latest CoreOS release
+  available in a particular channel. Sometimes, new CoreOS releases make changes that will break
+  Deis. It is always recommended to provision a Deis release with the CoreOS version specified
+  in that release's provision scripts or documentation.
+
+While typically not recommended, it is possible to trigger an update of a CoreOS machine. Some
+Deis releases may recommend a CoreOS upgrade - in these cases, the release notes for a Deis release
+will point to this documentation.
+
+To update CoreOS, run the following commands:
+
+.. code-block:: console
+
+    $ ssh core@<server ip>
+    $ sudo su
+    $ echo GROUP=stable > /etc/coreos/update.conf
+    $ systemctl unmask update-engine.service
+    $ systemctl start update-engine.service
+    $ update_engine_client -update
+    $ systemctl stop update-engine.service
+    $ systemctl mask update-engine.service
+    $ reboot
+
+.. warning::
+
+  You should only upgrade one host at a time. Removing multiple hosts from the cluster
+  simultaneously can result in failure of the etcd cluster. Ensure the recently-rebooted host
+  has returned to the cluster with ``fleetctl list-machines`` before moving on to the next host.
+
+You can check the CoreOS version by running the following command on the CoreOS machine:
+
+.. code-block:: console
+
+    $ cat /etc/os-release
+
+Or from your local machine:
+
+.. code-block:: console
+
+    $ ssh core@<server ip> 'cat /etc/os-release'

@@ -8,7 +8,8 @@ Amazon AWS
 
 In this tutorial, we will show you how to set up your own 3-node cluster on Amazon Web Services.
 
-Please refer to the scripts in `contrib/ec2`_ while following this documentation.
+Please :ref:`get the source <get_the_source>` and refer to the scripts in `contrib/ec2`_
+while following this documentation.
 
 
 Install the AWS Command Line Interface
@@ -19,10 +20,12 @@ In order to start working with Amazon's API, let's install `awscli`_:
 .. code-block:: console
 
     $ pip install awscli
-    Downloading/unpacking awscli
-      Downloading awscli-1.5.0.tar.gz (248kB): 248kB downloaded
-    ...
-    Successfully installed awscli
+
+We'll also need `PyYAML`_ for the Deis EC2 provision script to run:
+
+.. code-block:: console
+
+    $ pip install pyyaml
 
 
 Configure aws-cli
@@ -70,17 +73,7 @@ Deis clusters of less than 3 nodes are unsupported.
 Generate a New Discovery URL
 ----------------------------
 
-To get started with provisioning Deis, we will need to generate a new Discovery URL. Discovery URLs
-help connect `etcd`_ instances together by storing a list of peer addresses and metadata under a
-unique address. You can generate a new discovery URL for use in your platform by
-running the following from the root of the repository:
-
-.. code-block:: console
-
-    $ make discovery-url
-
-This will write a new discovery URL to the user-data file. Some convenience scripts are supplied in
-this user-data file, so it is mandatory for provisioning Deis.
+.. include:: ../_includes/_generate-discovery-url.rst
 
 
 Customize cloudformation.json
@@ -158,6 +151,11 @@ Run the cloudformation provision script to spawn a new CoreOS cluster:
     Your Deis cluster has successfully deployed.
     Please wait for all instances to come up as "running" before continuing.
 
+.. note::
+
+    The default name of the CloudFormation stack will be ``deis``. You can specify a different name
+    with ``./provision-ec2-cluster.sh <name>``.
+
 Check the AWS EC2 web control panel and wait until "Status Checks" for all instances have passed.
 This will take several minutes.
 
@@ -181,3 +179,4 @@ start installing the platform.
 .. _`cloudformation.json`: https://github.com/deis/deis/blob/master/contrib/ec2/cloudformation.json
 .. _`etcd`: https://github.com/coreos/etcd
 .. _`optimal etcd cluster size`: https://github.com/coreos/etcd/blob/master/Documentation/optimal-cluster-size.md
+.. _`PyYAML`: http://pyyaml.org/

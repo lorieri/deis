@@ -3,6 +3,7 @@
 package tests
 
 import (
+	"math/rand"
 	"os"
 	"testing"
 
@@ -10,15 +11,26 @@ import (
 )
 
 var (
-	appsCreateCmd         = "apps:create {{.AppName}}"
-	appsCreateCmdNoRemote = "apps:create {{.AppName}} --no-remote"
-	appsListCmd           = "apps:list"
-	appsRunCmd            = "apps:run echo hello"
-	appsOpenCmd           = "apps:open --app={{.AppName}}"
-	appsLogsCmd           = "apps:logs --app={{.AppName}}"
-	appsInfoCmd           = "apps:info --app={{.AppName}}"
-	appsDestroyCmd        = "apps:destroy --app={{.AppName}} --confirm={{.AppName}}"
+	appsCreateCmd          = "apps:create {{.AppName}}"
+	appsCreateCmdNoRemote  = "apps:create {{.AppName}} --no-remote"
+	appsCreateCmdBuildpack = "apps:create {{.AppName}} --buildpack https://example.com"
+	appsListCmd            = "apps:list"
+	appsRunCmd             = "apps:run echo Hello, 世界"
+	appsOpenCmd            = "apps:open --app={{.AppName}}"
+	appsLogsCmd            = "apps:logs --app={{.AppName}}"
+	appsInfoCmd            = "apps:info --app={{.AppName}}"
+	appsDestroyCmd         = "apps:destroy --app={{.AppName}} --confirm={{.AppName}}"
+	appsDestroyCmdNoApp    = "apps:destroy --confirm={{.AppName}}"
 )
+
+func randomString(n int) string {
+	var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}
 
 func TestApps(t *testing.T) {
 	params := appsSetup(t)
@@ -46,9 +58,11 @@ func appsCreateTest(t *testing.T, params *utils.DeisTestConfig) {
 	if err := utils.Chdir(params.ExampleApp); err != nil {
 		t.Fatal(err)
 	}
-	cmd := appsCreateCmd
-	utils.Execute(t, cmd, params, false, "")
-	utils.Execute(t, cmd, params, true, "App with this Id already exists")
+	// TODO: move --buildpack to client unit tests
+	utils.Execute(t, appsCreateCmdBuildpack, params, false, "BUILDPACK_URL")
+	utils.Execute(t, appsDestroyCmdNoApp, params, false, "")
+	utils.Execute(t, appsCreateCmd, params, false, "")
+	utils.Execute(t, appsCreateCmd, params, true, "App with this Id already exists")
 }
 
 func appsDestroyTest(t *testing.T, params *utils.DeisTestConfig) {
@@ -97,8 +111,11 @@ func appsRunTest(t *testing.T, params *utils.DeisTestConfig) {
 	if err := utils.Chdir(params.ExampleApp); err != nil {
 		t.Fatal(err)
 	}
-	utils.Execute(t, cmd, params, false, "hello")
+	utils.CheckList(t, cmd, params, "Hello, 世界", false)
 	utils.Execute(t, "apps:run env", params, true, "GIT_SHA")
+	// run a REALLY large command to test https://github.com/deis/deis/issues/2046
+	largeString := randomString(1024)
+	utils.Execute(t, "apps:run echo "+largeString, params, false, largeString)
 	if err := utils.Chdir(".."); err != nil {
 		t.Fatal(err)
 	}

@@ -238,16 +238,21 @@ coreos:
     peer-election-timeout: 2000
     # heartbeat interval should ideally be 1/4 or 1/5 of peer election timeout
     peer-heartbeat-interval: 500
+  units:
+  - name: install-deisctl.service
+    command: start
+    content: |
+      [Unit]
+      Description=Install deisctl utility
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/bin/sh -c 'curl -sSL --retry 5 --retry-delay 2 http://deis.io/deisctl/install.sh | sh -s 2.22.0'
 write_files:
   - path: /etc/deis-release
     content: |
-      DEIS_RELEASE=2.22.0
-  - path: /etc/profile.d/nse-function.sh
-    permissions: '0755'
-    content: |
-      function nse() {
-        sudo nsenter --pid --uts --mount --ipc --net --target $(docker inspect --format="{{ .State.Pid }}" $1)
-      }
+      DEIS_RELEASE=v2.22.0
+  - path: /etc/motd
 `
 
 var userdataAfter = `
@@ -264,16 +269,21 @@ coreos:
     peer-election-timeout: 2000
     # heartbeat interval should ideally be 1/4 or 1/5 of peer election timeout
     peer-heartbeat-interval: 500
+  units:
+  - name: install-deisctl.service
+    command: start
+    content: |
+      [Unit]
+      Description=Install deisctl utility
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/bin/sh -c 'curl -sSL --retry 5 --retry-delay 2 http://deis.io/deisctl/install.sh | sh -s 2.22.1'
 write_files:
   - path: /etc/deis-release
     content: |
-      DEIS_RELEASE=2.22.1
-  - path: /etc/profile.d/nse-function.sh
-    permissions: '0755'
-    content: |
-      function nse() {
-        sudo nsenter --pid --uts --mount --ipc --net --target $(docker inspect --format="{{ .State.Pid }}" $1)
-      }
+      DEIS_RELEASE=v2.22.1
+  - path: /etc/motd
 `
 
 var rst = `
@@ -314,8 +324,6 @@ Deis (pronounced DAY-iss) is an open source PaaS that makes it easy to deploy an
 [![Current Release](http://img.shields.io/badge/release-v0.12.0-blue.svg)](https://github.com/deis/deis/releases/tag/v0.12.0)
 
 ![Deis Graphic](https://s3-us-west-2.amazonaws.com/deis-images/deis-graphic.png)
-
-Deis is pre-release software. The current release is [v0.12.0](https://github.com/deis/deis/tree/v0.12.0). Until there is a stable release, we recommend you check out the latest ["master" branch](https://github.com/deis/deis) code and refer to the [latest documentation](http://docs.deis.io/en/latest/).  Upgrading from a previous Deis release? See [Upgrading Deis](http://docs.deis.io/en/latest/installing_deis/upgrading-deis/) for additional information.
 `
 
 var mdAfter = `
@@ -326,6 +334,4 @@ Deis (pronounced DAY-iss) is an open source PaaS that makes it easy to deploy an
 [![Current Release](http://img.shields.io/badge/release-v0.15.1-blue.svg)](https://github.com/deis/deis/releases/tag/v0.15.1)
 
 ![Deis Graphic](https://s3-us-west-2.amazonaws.com/deis-images/deis-graphic.png)
-
-Deis is pre-release software. The current release is [v0.15.1](https://github.com/deis/deis/tree/v0.15.1). Until there is a stable release, we recommend you check out the latest ["master" branch](https://github.com/deis/deis) code and refer to the [latest documentation](http://docs.deis.io/en/latest/).  Upgrading from a previous Deis release? See [Upgrading Deis](http://docs.deis.io/en/latest/installing_deis/upgrading-deis/) for additional information.
 `

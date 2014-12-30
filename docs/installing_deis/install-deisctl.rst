@@ -3,26 +3,26 @@
 
 .. _install_deisctl:
 
-Installing the Deis Control Utility
-===================================
+Install deisctl
+===============
 
 The Deis Control Utility, or ``deisctl`` for short, is a command-line client used to configure and
 manage the Deis Platform.
 
-Building from Installer
------------------------
+Run the Installer
+-----------------
 
-To install the latest version of deisctl, change to the directory where you would like to install
-the binary. Then, install the Deis Control Utility by downloading and running the install script
-with the following command:
+Change to the directory where you would like the ``deisctl`` binary to be installed, then download
+and run the latest installer:
 
 .. code-block:: console
 
     $ cd ~/bin
-    $ curl -sSL http://deis.io/deisctl/install.sh | sh -s 0.15.0
+    $ curl -sSL http://deis.io/deisctl/install.sh | sh -s 1.1.1
 
-This installs deisctl to the current directory, and refreshes the Deis systemd unit files used to
-schedule the components. Link it to /usr/local/bin, so it will be in your PATH:
+This installs ``deisctl`` version 1.1.1 to the current directory, and downloads the matching
+Deis systemd unit files used to schedule the components. Link ``deisctl`` into /usr/local/bin, so
+it will be in your ``$PATH``:
 
 .. code-block:: console
 
@@ -31,33 +31,25 @@ schedule the components. Link it to /usr/local/bin, so it will be in your PATH:
 To change installation options, save the installer directly:
 
 .. image:: download-linux-brightgreen.svg
-   :target: https://s3-us-west-2.amazonaws.com/opdemand/deisctl-0.15.0-linux-amd64.run
+   :target: https://s3-us-west-2.amazonaws.com/opdemand/deisctl-1.1.1-linux-amd64.run
 
 .. image:: download-osx-brightgreen.svg
-   :target: https://s3-us-west-2.amazonaws.com/opdemand/deisctl-0.15.0-darwin-amd64.run
+   :target: https://s3-us-west-2.amazonaws.com/opdemand/deisctl-1.1.1-darwin-amd64.run
 
 Then run the downloaded file as a shell script. Append ``--help`` to see what options
 are available.
 
-If you are using a specific Deis release (not latest), you'll want to use the deisctl built for
-your release.
+.. important::
 
-Builds are hosted on an S3 bucket at this URL format:
+    Always use a version of ``deisctl`` that matches the Deis release.
+    Verify this with ``deisctl --version``.
 
-``https://s3-us-west-2.amazonaws.com/opdemand/deisctl-<VERSION>-<darwin|linux>-amd64.run``
-
-For example, the deisctl release for Deis version 0.15.0 can be downloaded here:
-
-.. image:: download-linux-brightgreen.svg
-   :target: https://s3-us-west-2.amazonaws.com/opdemand/deisctl-0.15.0-linux-amd64.run
-
-.. image:: download-osx-brightgreen.svg
-   :target: https://s3-us-west-2.amazonaws.com/opdemand/deisctl-0.15.0-darwin-amd64.run
 
 Building from Source
 --------------------
 
-If you want to install from source, ensure you have `godep`_ installed and run:
+To build ``deisctl`` locally, first :ref:`get the source <get_the_source>`, ensure
+you have `godep`_ installed, and run:
 
 .. code-block:: console
 
@@ -68,6 +60,12 @@ You can then move or link the client so it will be in your path:
 .. code-block:: console
 
 	$ sudo ln -fs $PWD/deisctl/deisctl /usr/local/bin/deisctl
+
+.. note::
+
+    Remember to run ``deisctl refresh-units`` or to set ``$DEISCTL_UNITS`` to an appropriate
+    directory if you do not use the ``deisctl`` installer. Run the command
+    ``deisctl help refresh-units`` for more information.
 
 
 .. _`godep`: https://github.com/tools/godep

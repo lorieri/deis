@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 
+# fail on any command exiting non-zero
+set -eo pipefail
+
 if [[ -z $DOCKER_BUILD ]]; then
-  echo 
+  echo
   echo "Note: this script is intended for use by the Dockerfile and not as a way to build the registry locally"
-  echo 
+  echo
   exit 1
 fi
 
@@ -12,7 +15,8 @@ DEBIAN_FRONTEND=noninteractive
 sed -i 's/main$/main universe/' /etc/apt/sources.list
 
 # install required packages (copied from dotcloud/docker-registry Dockerfile)
-apt-get install -y git-core build-essential python-dev \
+apt-get update && \
+    apt-get install -y git-core build-essential python-dev \
     libevent-dev python-openssl liblzma-dev
 
 # install pip
@@ -24,7 +28,7 @@ useradd -s /bin/bash registry
 # add the docker registry source from github
 git clone https://github.com/deis/docker-registry /docker-registry && \
     cd /docker-registry && \
-    git checkout 94e7707 && \
+    git checkout 54fa9a1 && \
     chown -R registry:registry /docker-registry
 
 # install boto configuration

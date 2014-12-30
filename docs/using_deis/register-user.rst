@@ -5,12 +5,14 @@
 Register a User
 ===============
 To use Deis, you must first register a user on the :ref:`Controller`.
-To ``git push`` you must provide your SSH public key for authentication.
 
 Register with a Controller
 --------------------------
 Use ``deis register`` with the :ref:`Controller` URL (supplied by your Deis administrator)
 to create a new account.  You will be logged in automatically.
+
+The domain you use here should match the one you set with ``deisctl config platform set domain=``.
+Note that you always use ``deis.<domain>`` to communicate with the controller.
 
 .. code-block:: console
 
@@ -21,6 +23,10 @@ to create a new account.  You will be logged in automatically.
     email: myuser@example.com
     Registered myuser
     Logged in as myuser
+
+.. note::
+
+    For Vagrant clusters: ``deis register http://deis.local3.deisapp.com``
 
 .. important::
 
@@ -60,6 +66,10 @@ If you already have an account, use ``deis login`` to authenticate against the D
     username: deis
     password:
     Logged in as deis
+
+.. note::
+
+    For Vagrant clusters: ``deis login http://deis.local3.deisapp.com``
 
 .. note::
 

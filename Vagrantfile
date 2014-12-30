@@ -5,12 +5,16 @@ require 'fileutils'
 
 Vagrant.require_version ">= 1.6.5"
 
+unless Vagrant.has_plugin?("vagrant-triggers")
+  raise Vagrant::Errors::VagrantError.new, "Please install the vagrant-triggers plugin running 'vagrant plugin install vagrant-triggers'"
+end
+
 CLOUD_CONFIG_PATH = File.join(File.dirname(__FILE__), "contrib", "coreos", "user-data")
 CONFIG = File.join(File.dirname(__FILE__), "config.rb")
 
 # Defaults for config options defined in CONFIG
 $num_instances = 1
-$update_channel = "alpha"
+$update_channel = ENV["COREOS_CHANNEL"] || "stable"
 $enable_serial_logging = false
 $vb_gui = false
 $vb_memory = 1024
@@ -26,37 +30,26 @@ else
   $num_instances = 3
 end
 
-# VM sizing for Deis
-if $num_instances == 1
-  $vb_memory = 4096
-  $vb_cpus = 2
-else
-  $vb_memory = 2048
-  $vb_cpus = 1
-end
-
-COREOS_VERSION = "472.0.0"
-
 if File.exist?(CONFIG)
   require CONFIG
 end
 
 Vagrant.configure("2") do |config|
-  # config.vm.box = "coreos-%s" % $update_channel
-  # config.vm.box_version = ">= 308.0.1"
-  # config.vm.box_url = "http://%s.release.core-os.net/amd64-usr/current/coreos_production_vagrant.json" % $update_channel
-  config.vm.box = "coreos-#{COREOS_VERSION}"
-  config.vm.box_url = "http://storage.core-os.net/coreos/amd64-usr/#{COREOS_VERSION}/coreos_production_vagrant.box"
+  # always use Vagrants insecure key
+  config.ssh.insert_key = false
 
-  config.vm.provider :vmware_fusion do |vb, override|
-    # override.vm.box_url = "http://%s.release.core-os.net/amd64-usr/current/coreos_production_vagrant_vmware_fusion.json" % $update_channel
-    override.vm.box_url = "http://storage.core-os.net/coreos/amd64-usr/#{COREOS_VERSION}/coreos_production_vagrant_vmware_fusion.box"
-  end
+  config.vm.box = "coreos-%s" % $update_channel
+  config.vm.box_version = ">= 494.5.0"
+  config.vm.box_url = "http://%s.release.core-os.net/amd64-usr/current/coreos_production_vagrant.json" % $update_channel
 
   config.vm.provider :virtualbox do |vb, override|
     # Use paravirtualized network adapters
     vb.customize ["modifyvm", :id, "--nictype1", "virtio"]
     vb.customize ["modifyvm", :id, "--nictype2", "virtio"]
+  end
+
+  config.vm.provider :vmware_fusion do |vb, override|
+    override.vm.box_url = "http://%s.release.core-os.net/amd64-usr/current/coreos_production_vagrant_vmware_fusion.json" % $update_channel
   end
 
   config.vm.provider :virtualbox do |v|
@@ -69,6 +62,12 @@ Vagrant.configure("2") do |config|
   # plugin conflict
   if Vagrant.has_plugin?("vagrant-vbguest") then
     config.vbguest.auto_update = false
+  end
+
+  config.trigger.before :up do
+    if !File.exists?(CLOUD_CONFIG_PATH) || File.readlines(CLOUD_CONFIG_PATH).grep(/#\s*discovery:/).any?
+      raise Vagrant::Errors::VagrantError.new, "Run 'make discovery-url' first to create user-data."
+    end
   end
 
   (1..$num_instances).each do |i|

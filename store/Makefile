@@ -21,16 +21,6 @@ build: check-docker
 		rm $(I)/Dockerfile ; \
 	)
 
-push: check-docker check-registry check-deisctl
-	$(foreach I, $(BUILT_IMAGES), \
-		docker tag deis/store-$(I):$(BUILD_TAG) $(REGISTRY)/deis/store-$(I):$(BUILD_TAG) ; \
-		docker push $(REGISTRY)/deis/store-$(I):$(BUILD_TAG) ; \
-	)
-
-	$(foreach I, $(TEMPLATE_IMAGES), \
-		deisctl config store-$(I) set image=$(REGISTRY)/deis/store-$(I):$(BUILD_TAG) ; \
-	)
-
 clean: check-docker check-registry
 	$(foreach I, $(BUILT_IMAGES), \
 		docker rmi deis/store-$(I):$(BUILD_TAG) ; \
@@ -108,4 +98,4 @@ test-unit:
 
 test-functional:
 	@docker history deis/test-etcd >/dev/null 2>&1 || docker pull deis/test-etcd:latest
-	GOPATH=$(CURDIR)/../tests/_vendor:$(GOPATH) go test -v ./tests/...
+	GOPATH=`cd ../tests/ && godep path`:$(GOPATH) go test -v ./tests/...

@@ -59,7 +59,7 @@ master_doc = 'toctree'
 
 # General information about the project.
 project = u'deis'
-copyright = u'2013, OpDemand LLC'
+copyright = u'2013, 2014 OpDemand LLC'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -84,7 +84,7 @@ release = __version__
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build', 'venv']
+exclude_patterns = ['_build', 'venv', '**/_*.rst']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None

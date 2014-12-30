@@ -29,10 +29,6 @@ In order to deploy Dockerfile applications, they must conform to the following r
 
     Dockerfiles which expose more than one port will hit `issue 1156`_.
 
-.. attention::
-
-    Support for non-HTTP services is coming soon
-
 Create an Application
 ---------------------
 Use ``deis create`` to create an application on the :ref:`controller`.
@@ -117,19 +113,13 @@ Use ``git push deis master`` to deploy your application.
 
 Because a Dockerfile application is detected, the ``cmd`` process type is automatically scaled to 1 on first deploy.
 
-Define Process Types
---------------------
-Docker containers have a default command usually specified by a `CMD instruction`_.
-Deis uses the ``cmd`` process type to refer to this default command.
-
-Deis also supports scaling other process types as defined in a `Procfile`_.  To use this functionality, you must:
-
-1. Define process types with a `Procfile`_ in the root of your repository
-2. Include a ``start`` executable that can be called with: ``start <process-type>``
+Use ``deis scale cmd=3`` to increase ``cmd`` processes to 3, for example. Scaling a
+process type directly changes the number of :ref:`Containers <container>`
+running that process.
 
 
-.. _`Dockerfile`: http://docs.docker.io/en/latest/use/builder/
-.. _`Docker Image`: http://docs.docker.io/introduction/understanding-docker/
-.. _`CMD instruction`: http://docs.docker.io/reference/builder/#cmd
+.. _`Dockerfile`: https://docs.docker.com/reference/builder/
+.. _`Docker Image`: https://docs.docker.com/introduction/understanding-docker/
+.. _`CMD instruction`:  https://docs.docker.com/reference/builder/#cmd
 .. _`issue 1156`: https://github.com/deis/deis/issues/1156
 .. _`Procfile`: https://devcenter.heroku.com/articles/procfile

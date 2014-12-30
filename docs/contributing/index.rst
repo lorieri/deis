@@ -9,10 +9,12 @@ Contributing
 
 .. toctree::
 
-
     overview
     hacking
+    testing
     standards
     community
     conduct
+    schedule
     releases
+    test_plan

@@ -5,12 +5,10 @@
 .. _provision-controller:
 
 Installing Deis
-================
+===============
 
-The `controller` is the brains of a Deis platform. Provisioning a Deis
-controller is a matter of creating one or more :ref:`concepts_coreos`
-machines and installing a few necessary *systemd* units to manage
-Docker containers.
+Provisioning Deis is a matter of creating one or more :ref:`concepts_coreos`
+machines and using :ref:`install_deisctl` to install and start Deis.
 
 Anywhere you can run CoreOS, you can run Deis, including most cloud
 providers, virtual machines, and bare metal. See the
@@ -22,14 +20,16 @@ with CoreOS.
 
 .. toctree::
 
-    install-deisctl
-    install-platform
-    digitalocean
+    quick-start
+    system-requirements
     aws
-    vagrant
+    digitalocean
     gce
     rackspace
+    vagrant
     baremetal
-
+    openstack
+    install-deisctl
+    install-platform
 
 .. _`CoreOS Documentation`: https://coreos.com/docs/

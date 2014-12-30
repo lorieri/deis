@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 
+# fail on any command exiting non-zero
+set -eo pipefail
+
 if [[ -z $DOCKER_BUILD ]]; then
-  echo 
+  echo
   echo "Note: this script is intended for use by the Dockerfile and not as a way to build the database locally"
-  echo 
+  echo
   exit 1
 fi
 
@@ -33,7 +36,7 @@ cd /tmp
 git clone https://github.com/wal-e/wal-e.git
 
 cd /tmp/wal-e
-git checkout c6f0d02
+git checkout dbf9783
 
 pip install .
 

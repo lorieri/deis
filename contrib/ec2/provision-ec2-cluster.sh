@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 #
-# Usage: ./provision-ec2-cluster.sh
-#
+# Usage: ./provision-ec2-cluster.sh [name]
+# The [name] is the CloudFormation stack name, and defaults to 'deis'
+
+if [ -z "$1" ]
+  then
+    NAME=deis
+  else
+    NAME=$1
+fi
 
 set -e
 
@@ -33,9 +40,9 @@ $CONTRIB_DIR/util/check-user-data.sh
 
 # create an EC2 cloudformation stack based on CoreOS's default template
 aws cloudformation create-stack \
-    --template-body "$(./gen-json.py)" \
-    --stack-name deis \
-    --parameters "$(<cloudformation.json)"
+    --template-body "$($THIS_DIR/gen-json.py)" \
+    --stack-name $NAME \
+    --parameters "$(<$THIS_DIR/cloudformation.json)"
 
 echo_green "Your Deis cluster has successfully deployed to AWS CloudFormation."
 echo_green "Please continue to follow the instructions in the README."

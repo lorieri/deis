@@ -14,6 +14,13 @@ right to make the contribution.
 
 # Support Channels
 
+Before opening a new issue, it's helpful to search the project - it's likely that another user
+has already reported the issue you're facing, or it's a known issue that we're already aware of.
+
+Additionally, see the [Troubleshooting Deis][troubleshooting] documentation for common issues.
+
+Our official support channels are:
+
 - GitHub issues: https://github.com/deis/deis/issues/new
 - IRC: #[deis](irc://irc.freenode.org:6667/#deis) IRC channel on freenode.org
 
@@ -36,6 +43,15 @@ This is a rough outline of what a contributor's workflow looks like:
 - Submit a pull request
 
 Thanks for your contributions!
+
+### Design Proposals
+
+When considering a design proposal, we are looking for:
+
+- A description of the problem this design proposal solves
+- A pull request that modifies the documentation, describing the feature you are proposing
+- Prefix your pull request with `Proposal:` in the title
+- Please review the existing Proposals before reporting a new one.
 
 ### Commit Style Guideline
 
@@ -88,3 +104,4 @@ For more details see the [commit style guide][style-guide].
 
 [dco]: DCO
 [style-guide]: http://docs.deis.io/en/latest/contributing/standards/#commit-style-guide
+[troubleshooting]: http://docs.deis.io/en/latest/troubleshooting_deis/

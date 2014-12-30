@@ -6,9 +6,15 @@
 Security considerations
 ========================
 
+.. important::
+
+    Deis is not suitable for multi-tenant environments
+    or hosting untrusted code.
+
 A major goal of Deis is to be operationally secure and trusted by operations engineers in every deployed
 environment. There are, however, two notable security-related considerations to be aware of
 when deploying Deis.
+
 
 Access to etcd
 --------------
@@ -25,7 +31,6 @@ containers. Some requirements include:
 * Containers must be able to access other containers
 * Containers cannot access the CoreOS host (SSH, etcd, etc)
 
-In practice, this is really only a concern when clusters are running untrusted applications.
 Further discussion about this approach is appreciated in GitHub issue `#986`_.
 
 Application runtime segregation
@@ -45,4 +50,28 @@ environment by using ```deis tags set environment=production```. Deis will pass 
 along to the scheduler, and your applications in different environments on running on separate
 hardware.
 
+.. _deis_on_public_clouds:
+
+Running Deis on Public Clouds
+-----------------------------
+If you are running on a public cloud without security group features, you will have to set up
+security groups yourself through either ``iptables`` or a similar tool. The only ports that should
+be exposed to the public are:
+
+ - 22: for remote SSH
+ - 80: for the routers
+ - 443: (optional) routers w/ SSL enabled
+ - 2222: for the builder
+
+For providers that do not supply a security group feature, please try
+`contrib/util/custom-firewall.sh`_.
+
+Router firewall
+---------------
+The :ref:`Router` component includes a firewall to help thwart attacks. It can be enabled by running:
+``deisctl config router set firewall/enabled true``. For more information, see the `router README`_
+and :ref:`router_settings`.
+
 .. _`#986`: https://github.com/deis/deis/issues/986
+.. _`contrib/util/custom-firewall.sh`: https://github.com/deis/deis/blob/master/contrib/util/custom-firewall.sh
+.. _`router README`: https://github.com/deis/deis/blob/master/router/README.md
