@@ -8,10 +8,14 @@ import (
 	"github.com/deis/deis/tests/dockercli"
 	"github.com/deis/deis/tests/etcdutils"
 	"github.com/deis/deis/tests/utils"
+
+	"io/ioutil"
+	"os"
 )
 
 func TestBuilder(t *testing.T) {
 	var err error
+	var errfile error
 	setkeys := []string{
 		"/deis/registry/protocol",
 		"/deis/registry/host",
@@ -31,6 +35,14 @@ func TestBuilder(t *testing.T) {
 		"/deis/domains",
 		"/deis/services",
 	}
+	setproxy := []byte("HTTP_PROXY=\nhttp_proxy=\n")
+
+        tmpfile,errfile := ioutil.TempFile("/tmp", "deis-test-")
+        if errfile != nil {
+                panic(errfile)
+        }
+        ioutil.WriteFile(tmpfile.Name(), setproxy, 0644)
+
 	tag, etcdPort := utils.BuildTag(), utils.RandomPort()
 	etcdName := "deis-etcd-" + tag
 	cli, stdout, stdoutPipe := dockercli.NewClient()
@@ -53,7 +65,9 @@ func TestBuilder(t *testing.T) {
 			"-e", "HOST="+host,
 			"-e", "ETCD_PORT="+etcdPort,
 			"-e", "EXTERNAL_PORT="+port,
-			"--privileged", "deis/builder:"+tag)
+			"--privileged",
+			"-v", tmpfile.Name()+":/etc/environment_proxy",
+			"deis/builder:"+tag)
 	}()
 	dockercli.PrintToStdout(t, stdout, stdoutPipe, "deis-builder running")
 	if err != nil {
@@ -65,4 +79,6 @@ func TestBuilder(t *testing.T) {
 	dockercli.DeisServiceTest(t, name, port, "tcp")
 	etcdutils.VerifyEtcdValue(t, "/deis/builder/host", host, etcdPort)
 	etcdutils.VerifyEtcdValue(t, "/deis/builder/port", port, etcdPort)
+
+	defer os.Remove(tmpfile.Name())
 }
