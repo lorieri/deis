@@ -29,6 +29,7 @@ with CoreOS.
     vagrant
     baremetal
     openstack
+    proxy-settings
     install-deisctl
     install-platform
 
