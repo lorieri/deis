@@ -37,11 +37,11 @@ func TestBuilder(t *testing.T) {
 	}
 	setproxy := []byte("HTTP_PROXY=\nhttp_proxy=\n")
 
-        tmpfile,errfile := ioutil.TempFile("/tmp", "deis-test-")
-        if errfile != nil {
-                panic(errfile)
-        }
-        ioutil.WriteFile(tmpfile.Name(), setproxy, 0644)
+	tmpfile, errfile := ioutil.TempFile("/tmp", "deis-test-")
+	if errfile != nil {
+		panic(errfile)
+	}
+	ioutil.WriteFile(tmpfile.Name(), setproxy, 0644)
 
 	tag, etcdPort := utils.BuildTag(), utils.RandomPort()
 	etcdName := "deis-etcd-" + tag
